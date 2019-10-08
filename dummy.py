@@ -41,11 +41,11 @@ class DummyExt(Dummy):
         self.b = b
         self.c = c
         self.d = d 
-        self.e = args
-        self.f = kwargs
+        self.x = args
+        self.y = kwargs
     
     def get_params(self):
-        pass
+        return self.__dict__.copy()
 
 obj = DummyExt(a = 1, b = 2, c = 3, d = 4, e = 5, f = 6)
-obj._get_param_names()
+print(obj.get_params())
