@@ -28,11 +28,11 @@ def init():
     theta_est_list.append(np.random.randn(2,1))
 
 def animate(i):
-    if i >= 1000:
-        return
+    if 0==i%100:
+        init()
     theta_est = theta_est_list[-1]
     y_pred = X_concat@theta_est
-    theta_est = theta_est - 0.1*loss_grad(X_concat, y_true, y_pred)
+    theta_est = theta_est - 0.02*loss_grad(X_concat, y_true, y_pred)
     theta_est_list.clear()
     theta_est_list.append(theta_est)
     ax.clear()
