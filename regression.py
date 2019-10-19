@@ -20,7 +20,7 @@ def clac_r2(y_true, y_pred):
 theta = np.random.randn(2, 1)
 X = np.random.randn(30, 1)
 X_concat = np.concatenate((np.ones((X.shape[0],1)), X), axis=1) # dim =  (30, 2)
-y_true = X_concat@theta + 0.1*np.random.randn(30,1)
+y_true = X_concat@theta + 0.05*np.random.randn(30,1)
 
 theta_est_list = []
 
@@ -28,11 +28,11 @@ def init():
     theta_est_list.append(np.random.randn(2,1))
 
 def animate(i):
-    if 0==i%100:
+    if 0==i%50:
         init()
     theta_est = theta_est_list[-1]
     y_pred = X_concat@theta_est
-    theta_est = theta_est - 0.02*loss_grad(X_concat, y_true, y_pred)
+    theta_est = theta_est - 0.05*loss_grad(X_concat, y_true, y_pred)
     theta_est_list.clear()
     theta_est_list.append(theta_est)
     ax.clear()
