@@ -47,14 +47,20 @@ class BinaryLogisticRegression:
     # check if the dataset and labels are consistent with our convention.
     if X is None or y is None:
       raise ValueError(
-          "Training datasets X and y can't be `None`. \n"
+          "Training datasets X and y can't be `None`."
       )
     if not isinstance(X, np.ndarray) or not isinstance(y, np.ndarray):
       raise ValueError(
           "Training datasets must be "
-          f"of type `numpy.ndarray`. \n"
+          f"of type `numpy.ndarray`."
       )
     
+    if len(X.shape) != 2:
+      raise ValueError(
+          "Expected an 2 dimentional array. "
+          f"found a {len(X.shape)} dimentional array."
+      )
+
     # initialize the class variables using given datasets
     self.X = X
     self.y = y.reshape(-1,1)
@@ -66,32 +72,32 @@ class BinaryLogisticRegression:
     if y.size != self.n_samples:
       raise ValueError(
           "Size of the labels doesn't match "
-          "with the number of samples. \n"
-          f"size of labels found: {y.size} \n"
-          f"size accepted: {self.n_samples} \n"
+          "with the number of samples.  "
+          f"size of labels found: {y.size}. "
+          f"size accepted: {self.n_samples}"
       )
     
     # check if the pretrained weights are consistent with our convention
     if pretrained_weights is not None:
       if not isinstance(pretrained_weights, np.ndarray):
         raise TypeError(
-            "Pretrained weights must be of the type numpy.ndarray. \n"
-            f"found {pretrained_weights.__class__}. \n"
+            "Pretrained weights must be of the type numpy.ndarray. "
+            f"found {pretrained_weights.__class__}."
         )
       if pretrained_weights.shape[0] != self.n_features+1:
         warnings.warn(
-            f"Weights must be of the shape ({self.n_features+1},1). \n"
-            f"found {pretrained_weights.shape}. \n"
-            f"reshaping the weights to shape ({self.n_features+1},1). \n",
+            f"Weights must be of the shape ({self.n_features+1},1). "
+            f"found {pretrained_weights.shape}. "
+            f"reshaping the weights to shape ({self.n_features+1},1).",
             RuntimeWarning
         )
         try:
           pretrained_weights = pretrained_weights.reshape(self.n_features+1,1)
         except ValueError:
           raise ValueError(
-              "Pretrained weights don't match with the "
-              f"shape ({self.n_features+1},1). \n"
-              f"Found {pretrained_weights.shape}. \n"
+              "Pretrained weights are not consistent with the shape of the dataset. "
+              f"shape expected: ({self.n_features+1},1). "
+              f"found: {pretrained_weights.shape}."
           )
     
     # if consistent, initialize the weights of the model
@@ -260,9 +266,9 @@ class BinaryLogisticRegression:
       raise TypeError(
           "The loss function passed as argument is "
           "not supported in this version "
-          "or doesn't exists. \n"
-          f"found: {self.loss} \n"
-          f"supported losses: {list(self.LOSS_TAGS.keys())} \n"
+          "or doesn't exists. "
+          f"found: {self.loss}. "
+          f"supported losses: {list(self.LOSS_TAGS.keys())}"
       )
     
     # check if the given metrix exists or is present in this version.
@@ -271,9 +277,9 @@ class BinaryLogisticRegression:
         raise TypeError(
             "The metric passed as argument is "
             "not supported in this version "
-            "or doesn't exists. \n"
-            f"found: {metric}\n"
-            f"supported metrics: {list(self.METRICS_TAGS.keys())}\n"
+            "or doesn't exists. "
+            f"found: {metric}. "
+            f"supported metrics: {list(self.METRICS_TAGS.keys())}"
         )
     
     # start training.
@@ -324,8 +330,8 @@ class BinaryLogisticRegression:
     if X_test.shape[1] != self.n_features:
       raise ValueError(
           "Shape of the new dataset is not consistent"
-          "with the shape of training dataset.\n"
-          f"shape found: (n_samples, {X_test.shape[1]})\n"
+          "with the shape of training dataset. "
+          f"shape found: (n_samples, {X_test.shape[1]}). "
           f"shape expected: (n_samples, {self.X.shape[1]})"
       )
     
