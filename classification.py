@@ -286,7 +286,7 @@ class BinaryLogisticRegression:
     start = time.time()
     self.is_fitted = True
     for i in range(epochs):
-      preds = self._decision_function()
+      preds = self._decision_function(self.X)
       loss = self._calc_loss(preds)
       for metric in metrics:
         self.metric_scores[metric] = np.round(self._calc_metric(metric, preds), 4)
@@ -327,14 +327,24 @@ class BinaryLogisticRegression:
     >>> trained_weights = model.get_params()
     """
     # check if the array is consistent with the convention
-    if X_test.shape[1] != self.n_features:
+    if not isinstance(X_test, np.ndarray):
+      raise TypeError(
+          "The argument passed must be a numpy array"
+          " of shape (n?, n_features)."
+      )
+    elif len(X_test.shape) != 2:
+      raise ValueError(
+          f"Dimentions of the dataset must be 2. found {len(X_test.shape)}"
+      )
+    if X_test is not self.X and X_test.shape[1] != self.n_features:
       raise ValueError(
           "Shape of the new dataset is not consistent"
           "with the shape of training dataset. "
           f"shape found: (n_samples, {X_test.shape[1]}). "
-          f"shape expected: (n_samples, {self.X.shape[1]})"
+          f"shape expected: (n_samples, {self.X.shape[1]-1})"
       )
-    
+    if X_test.shape[1] == self.n_features and np.sum(X_test[:,0] != np.ones((X_test.shape[0],), dtype=np.float32))!=0:
+      X_test = np.concatenate((np.ones((X_test.shape[0],1), dtype=np.float32), X_test), axis=1)
     # if probs=True, return the probabilty of labels being 1.
     if probs:
       return self._decision_function(X_test)
@@ -370,7 +380,7 @@ class BinaryLogisticRegression:
   
   def __str__(self):
     if self.is_fitted:
-      return f"Trained BinaryLogisticRegressor with metric scores {self.metric_scores} and loss {self._calc_loss(self.predict(probs=True))} at {id(self)}"
+      return f"Trained BinaryLogisticRegressor with metric scores {self.metric_scores} and loss {self._calc_loss(self.predict(self.X, probs=True))} at {id(self)}"
     return f"Untrained BinaryLogisticRegressor at {id(self)}"
 
   def __getstate__(self):
