@@ -42,6 +42,7 @@ class BinaryLogisticRegression:
   >>> preds = model.predict(y_test)
   >>> trained_weights = model.get_params()
   
+  See also :ref:`_minimal_cost_complexity_pruning` for details on pruning.
   """
   def __init__(self, X, y, pretrained_weights = None):
     # check if the dataset and labels are consistent with our convention.
@@ -206,7 +207,7 @@ class BinaryLogisticRegression:
     """
     self.w = self.w - lr*self.LOSS_TAGS[self.loss][1](preds)
   
-  def fit(self, epochs=100, lr=0.01, metrics=['accuracy'], loss='mse'):
+  def fit(self, epochs=1000, lr=0.01, metrics=['accuracy'], loss='mse'):
     """
     Fits the model to the provided dataset.
 
@@ -288,7 +289,7 @@ class BinaryLogisticRegression:
     for i in range(epochs):
       preds = self._decision_function(self.X)
       loss = self._calc_loss(preds)
-      for metric in metrics:
+      for metric in metrics:  
         self.metric_scores[metric] = np.round(self._calc_metric(metric, preds), 4)
       self._update_params(preds, lr)
       stdout.write(
