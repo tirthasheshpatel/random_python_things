@@ -305,7 +305,7 @@ class GaussianMM:
 
         return self.vlb, self.mu, self.sigma, self.pi
 
-    def fit_animate(self, X, render_as_mp4=True):
+    def fit_animate(self, X, *, render_as_mp4=True):
         """Visualize the training of GMMs by
         running an animation in real time!!!!"""
         self.set_data(X)
@@ -316,7 +316,10 @@ class GaussianMM:
         self.grid = np.empty((500, 500, 2))
         self.grid[:, :, 0] = self.xm
         self.grid[:, :, 1] = self.ym
-        anim = FuncAnimation(self.fig, self._fit_animate, init_func=self._init_animate, frames=100, interval=50, blit=False)
+        anim = FuncAnimation(self.fig,
+                             self._fit_animate,
+                             init_func=self._init_animate,
+                             frames=500, interval=200, blit=False)
         if render_as_mp4:
             anim.save('gmm2d_animation.mp4')
         else:
