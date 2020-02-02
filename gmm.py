@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt 
 from scipy.stats import norm
 from matplotlib.animation import FuncAnimation
-np.random.seed(9000)
+# np.random.seed(9001)
 
 def step(X, dist1, dist2, **kwargs):
     mu1 = kwargs['mu1']
