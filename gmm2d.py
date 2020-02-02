@@ -1,9 +1,11 @@
 import warnings
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 from scipy.stats import multivariate_normal as Normal
 from sklearn.datasets import make_blobs, make_spd_matrix
-import sys
+np.random.seed(42)
 
 def make_simplex(n_clusters):
     """Generate a (n_clusters - 1)-D random simplex"""
@@ -121,7 +123,7 @@ class GaussianMM:
         $$L(\theta, q^k) = \sum _{i=1} ^{N} \sum _{c=1} ^{C} q^k(t_i=c)\log\left(\frac{P(x_i, t_i=c|\theta_c)}{q^k(t_i=c)}\right)$$
 
         This function can be diffrentiatied w.r.t to our parameters
-        to get the following parameters:
+        to get the following equations:
 
         Mean : $$\mu_c = \frac{\sum_{i=1}^{N} q(t_i=c)x_i}{\sum_{i=1}^{N} q(t_i=c)}$$
 
@@ -154,7 +156,59 @@ class GaussianMM:
         # differentiating the VLB.
         self._m_step(X)
 
-        return None
+    def _init_animate(self):
+        """Initialize the animation"""
+        self.ax.clear()
+        self.__init_params(*self.X.shape)
+
+        labels = self.posterior.argmax(axis=0)
+        colors = np.array([(31, 119, 180), (255, 127, 14), (44, 160, 44)]) / 255.
+
+        zm = self.pi[0]*Normal.pdf(self.grid, mean=self.mu[0], cov=self.sigma[0])
+        for cluster in range(1, self.n_clusters):
+            zm += self.pi[cluster]*Normal.pdf(self.grid, mean=self.mu[cluster], cov=self.sigma[cluster])
+
+        self.cf = self.ax.contourf(self.xm, self.ym, zm, alpha=0.6)
+        self.sc = self.ax.scatter(self.X[:, 0], self.X[:, 1], c=colors[labels], s=30)
+        return self.cf, self.sc
+
+    def _fit_animate(self, frame):
+        """Runs an animation while training!"""
+        # This is the optional part used for plotting
+        # so I can play animations. Not needed to be
+        # tested! Enjoy!
+        # Restart the animation every 25 steps
+        if ((frame+1) % 25) == 0:
+            self.__init_params(*self.X.shape)
+        self.ax.clear()
+        try:
+            if np.abs(1. - np.sum(self.pi)) > 1e-9:
+                plt.title("Model Collapsed!")
+                return self.cf, self.sc
+            self._step(self.X)
+            vlb = self._vlb(self.X)
+            if vlb > self.vlb:
+                self.vlb = vlb
+        except np.linalg.LinAlgError:
+            self.__init_params(*self.X.shape)
+            plt.title("Model Collapsed!")
+            return self.cf, self.sc
+
+        labels = self.posterior.argmax(axis=0)
+        colors = np.array([(31, 119, 180), (255, 127, 14), (44, 160, 44)]) / 255.
+
+        zm = self.pi[0]*Normal.pdf(self.grid, mean=self.mu[0], cov=self.sigma[0])
+        for cluster in range(1, self.n_clusters):
+            zm += self.pi[cluster]*Normal.pdf(self.grid, mean=self.mu[cluster], cov=self.sigma[cluster])
+
+        self.cf = self.ax.contourf(self.xm, self.ym, zm, alpha=0.6)
+        self.sc = self.ax.scatter(self.X[:, 0], self.X[:, 1], c=colors[labels], s=30)
+        plt.title(f"loss : {vlb:.2f}, best_loss : {self.vlb:.2f}")
+        return self.cf, self.sc
+
+    def set_data(self, X):
+        """Used only to run animations on particulare datasets."""
+        self.X = X
 
     def _log_likelihood(self, X):
         raise NotImplementedError("I am Lazy!")
@@ -186,7 +240,7 @@ class GaussianMM:
 
         return vlb
 
-    def fit(self, X, max_iter=100, n_repeats=100, rtol=1e-9):
+    def fit(self, X, max_iter=100, n_repeats=100, rtol=1e-9, log_vbl=False):
         """Fit a dataset to the model.
 
         Parameters
@@ -204,10 +258,6 @@ class GaussianMM:
         rtol : float, optional
                tolerance for divergence of weights of gaussians.
         """
-        # sanity check for the parameters
-        if not isinstance(n_repeats, int):
-            raise ValueError("number of repeats must be a integer")
-
         # start training
         vlb = -np.inf
         best_mu = None
@@ -230,10 +280,11 @@ class GaussianMM:
                         break
                     self._step(X)
                     vlb = self._vlb(X)
-                    sys.stdout.write(
-                        f"\rTrial {_+1}/{n_repeats}, "
-                        f"Epoch {__+1}/{max_iter} : loss : {vlb:.2f}, best_loss : {self.vlb:.2f}"
-                    )
+                    if log_vbl:
+                        sys.stdout.write(
+                            f"\rTrial {_+1}/{n_repeats}, Epoch {__+1}/{max_iter} : "
+                            f"loss : {vlb:.2f}, best_loss : {self.vlb:.2f}"
+                        )
                 
                 # We chosse the best parameters
                 # that maximize our lower bound
@@ -254,23 +305,35 @@ class GaussianMM:
 
         return self.vlb, self.mu, self.sigma, self.pi
 
+    def fit_animate(self, X, render_as_mp4=True):
+        """Visualize the training of GMMs by
+        running an animation in real time!!!!"""
+        self.set_data(X)
+        self.fig, self.ax = plt.subplots()
+        xs = np.linspace(-15., 15., num=500)
+        ys = np.linspace(-15., 15., num=500)
+        self.xm, self.ym = np.meshgrid(xs, ys)
+        self.grid = np.empty((500, 500, 2))
+        self.grid[:, :, 0] = self.xm
+        self.grid[:, :, 1] = self.ym
+        anim = FuncAnimation(self.fig, self._fit_animate, init_func=self._init_animate, frames=100, interval=50, blit=False)
+        if render_as_mp4:
+            anim.save('gmm2d_animation.mp4')
+        else:
+            plt.show()
+
+        return None
+
     def predict(self, X):
         raise NotImplementedError("I am lazy!")
 
     def get_params(self):
+        """Get a copy of parameters of the model
+        which is a tuple (mu, sigma, pi)."""
         return self.mu.copy(), self.sigma.copy(), self.pi.copy()
 
 if __name__ == '__main__':
-    X, _ = make_blobs(n_samples=150, centers=3, n_features=2, cluster_std=1.)
-    plt.scatter(X[:, 0], X[:, 1])
-    plt.show()
+    X, _ = make_blobs(n_samples=150, centers=3, n_features=2, cluster_std=2.)
     model = GaussianMM(n_clusters=3)
-    model.fit(X)
-
-    labels = model.posterior.argmax(axis=0)
-    colors = np.array([(31, 119, 180), (255, 127, 14), (44, 160, 44)]) / 255.
-    plt.scatter(X[:, 0], X[:, 1], c=colors[labels], s=30)
-    plt.axis('equal')
-    plt.show()
-
-    mu, sigma, pi = 
+    # Please work! Please!!!
+    model.fit_animate(X)
