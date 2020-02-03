@@ -9,7 +9,7 @@ np.random.seed(42)
 
 def make_simplex(n_clusters):
     """Generate a (n_clusters - 1)-D random simplex"""
-    x = np.random.rand(n_clusters)
+    x = np.random.randn(n_clusters)
     return np.exp(x)/np.sum(np.exp(x))
 
 class GaussianMM:
@@ -72,7 +72,7 @@ class GaussianMM:
 
         # initialize the `theta` parameters
         self.pi = make_simplex(self.n_clusters).reshape(-1, 1)
-        self.mu = np.random.rand(self.n_clusters, self.n_features)
+        self.mu = np.random.randn(self.n_clusters, self.n_features)
         self.sigma = np.asarray([make_spd_matrix(self.n_features) \
                                  for _ in range(self.n_clusters)])
         
@@ -96,7 +96,7 @@ class GaussianMM:
         =====================================================
         Shapes
         -----
-        posterior : Row vector of shape `(n_clusters, 1)`
+        posterior : Matrix of shape `(n_clusters, n_samples)`
         =====================================================
         """
         # First, calculate the normalization constant of the posterior.
@@ -162,14 +162,13 @@ class GaussianMM:
         self.__init_params(*self.X.shape)
 
         labels = self.posterior.argmax(axis=0)
-        colors = np.array([(31, 119, 180), (255, 127, 14), (44, 160, 44)]) / 255.
 
         zm = self.pi[0]*Normal.pdf(self.grid, mean=self.mu[0], cov=self.sigma[0])
         for cluster in range(1, self.n_clusters):
             zm += self.pi[cluster]*Normal.pdf(self.grid, mean=self.mu[cluster], cov=self.sigma[cluster])
 
         self.cf = self.ax.contourf(self.xm, self.ym, zm, alpha=0.6)
-        self.sc = self.ax.scatter(self.X[:, 0], self.X[:, 1], c=colors[labels], s=30)
+        self.sc = self.ax.scatter(self.X[:, 0], self.X[:, 1], c=self.colors[labels], s=30)
         return self.cf, self.sc
 
     def _fit_animate(self, frame):
@@ -177,9 +176,10 @@ class GaussianMM:
         # This is the optional part used for plotting
         # so I can play animations. Not needed to be
         # tested! Enjoy!
-        # Restart the animation every 25 steps
-        if ((frame+1) % 25) == 0:
+        # Restart the animation every max_iter steps
+        if ((frame+1) % self.__max_iter) == 0:
             self.__init_params(*self.X.shape)
+
         self.ax.clear()
         try:
             if np.abs(1. - np.sum(self.pi)) > 1e-9:
@@ -195,19 +195,18 @@ class GaussianMM:
             return self.cf, self.sc
 
         labels = self.posterior.argmax(axis=0)
-        colors = np.array([(31, 119, 180), (255, 127, 14), (44, 160, 44)]) / 255.
 
         zm = self.pi[0]*Normal.pdf(self.grid, mean=self.mu[0], cov=self.sigma[0])
         for cluster in range(1, self.n_clusters):
             zm += self.pi[cluster]*Normal.pdf(self.grid, mean=self.mu[cluster], cov=self.sigma[cluster])
 
         self.cf = self.ax.contourf(self.xm, self.ym, zm, alpha=0.6)
-        self.sc = self.ax.scatter(self.X[:, 0], self.X[:, 1], c=colors[labels], s=30)
+        self.sc = self.ax.scatter(self.X[:, 0], self.X[:, 1], c=self.colors[labels], s=30)
         plt.title(f"loss : {vlb:.2f}, best_loss : {self.vlb:.2f}")
         return self.cf, self.sc
 
     def set_data(self, X):
-        """Used only to run animations on particulare datasets."""
+        """Used only to run animations on particular datasets."""
         self.X = X
 
     def _log_likelihood(self, X):
@@ -240,7 +239,7 @@ class GaussianMM:
 
         return vlb
 
-    def fit(self, X, max_iter=100, n_repeats=100, rtol=1e-9, log_vbl=False):
+    def fit(self, X, max_iter=100, n_repeats=100, rtol=1e-9, verbose=False):
         """Fit a dataset to the model.
 
         Parameters
@@ -257,6 +256,20 @@ class GaussianMM:
 
         rtol : float, optional
                tolerance for divergence of weights of gaussians.
+        
+        verbose : bool, optional
+                  If True, it prints the loss and best
+                  loss on the terminal.
+        
+        Returns
+        -----
+        vlb, mu, sigma, pi : best loss and parameters of the model.
+
+        Examples
+        -----
+        >>> from gmm2d import GaussianMM
+        >>> model = GaussianMM(n_clusters=3)
+        >>> loss, mu, sigma, pi = model.fit(X_train)
         """
         # start training
         vlb = -np.inf
@@ -280,7 +293,7 @@ class GaussianMM:
                         break
                     self._step(X)
                     vlb = self._vlb(X)
-                    if log_vbl:
+                    if verbose:
                         sys.stdout.write(
                             f"\rTrial {_+1}/{n_repeats}, Epoch {__+1}/{max_iter} : "
                             f"loss : {vlb:.2f}, best_loss : {self.vlb:.2f}"
@@ -305,21 +318,58 @@ class GaussianMM:
 
         return self.vlb, self.mu, self.sigma, self.pi
 
-    def fit_animate(self, X, *, render_as_mp4=True):
+    def fit_animate(self, X, colors, frames=50, interval=100, max_iter=100, *, render_as_mp4=True):
         """Visualize the training of GMMs by
-        running an animation in real time!!!!"""
+        running an animation in real time!!!
+
+        Parameters
+        -----
+        X : array_like
+            Dataset to fit
+        
+        colors : array_like
+                 Array of colors to assign to
+                 the clusters in the animation
+        
+        frames : int, optional
+                 number of frames in the animation.
+                 only necessary while saving animation
+
+        interval : int, optional
+                   interval between two updates in the animation
+
+        max_iter : int, optional
+                   Maximum iterations of EM-Step for each
+                   random initialization
+        
+        render_as_mp4 : bool, optional
+                        If true animation is saved in the 
+                        directory running the script.
+        
+        Examples
+        -----
+        >>> from gmm2d import GaussianMM
+        >>> model = GaussianMM(n_clusters=3)
+        >>> model.fit_animate(X_train)
+        """
+        self.__max_iter = max_iter
         self.set_data(X)
         self.fig, self.ax = plt.subplots()
-        xs = np.linspace(-15., 15., num=500)
-        ys = np.linspace(-15., 15., num=500)
+        xmin, ymin, xmax, ymax = (np.min(self.X[:, 0]),
+                                 np.min(self.X[:, 1]),
+                                 np.max(self.X[:, 0]),
+                                 np.max(self.X[:, 1]))
+        xs = np.linspace(xmin-1., xmax+1., num=500)
+        ys = np.linspace(ymin-1., ymax+1., num=500)
         self.xm, self.ym = np.meshgrid(xs, ys)
         self.grid = np.empty((500, 500, 2))
         self.grid[:, :, 0] = self.xm
         self.grid[:, :, 1] = self.ym
+        self.colors = colors
         anim = FuncAnimation(self.fig,
                              self._fit_animate,
                              init_func=self._init_animate,
-                             frames=500, interval=200, blit=False)
+                             frames=frames, interval=interval, blit=False)
         if render_as_mp4:
             anim.save('gmm2d_animation.mp4')
         else:
@@ -328,7 +378,27 @@ class GaussianMM:
         return None
 
     def predict(self, X):
-        raise NotImplementedError("I am lazy!")
+        """Predict the labels of a new dataset.
+        
+        Parameters
+        -----
+        X : array_like
+            dataset
+        
+        Returns
+        -----
+        labels : labels corresponding to the dataset.
+
+        Examples
+        -----
+        >>> from gmm2d import GaussianMM
+        >>> model = GaussianMM(n_clusters=3)
+        >>> model.fit(X_train)
+        >>> labels = model.predict(X_test)
+        """
+        self.posterior_predictive = self._e_step(X)
+        labels = np.argmax(self.posterior_predictive, axis=0)
+        return labels
 
     def get_params(self):
         """Get a copy of parameters of the model
@@ -336,7 +406,14 @@ class GaussianMM:
         return self.mu.copy(), self.sigma.copy(), self.pi.copy()
 
 if __name__ == '__main__':
-    X, _ = make_blobs(n_samples=150, centers=3, n_features=2, cluster_std=2.)
-    model = GaussianMM(n_clusters=3)
-    # Please work! Please!!!
-    model.fit_animate(X)
+    """Some cool stuff ahead!
+    Wasted two days running this animation
+    and still find it satisfying! Love it!!
+    Now, i need to get to some new stuff.
+    Enjoy!!
+    """
+    X, _ = make_blobs(n_samples=150, centers=5, n_features=2, cluster_std=1.)
+    colors = np.array([(31, 119, 180), (255, 127, 14), (44, 160, 44), (111, 12, 10), (10, 100, 255),
+                       (200, 100, 100), (12, 0, 0), (255, 255, 200), (150, 150, 0), (0, 255, 255)]) / 255.
+    model = GaussianMM(n_clusters=5)
+    model.fit_animate(X, colors, render_as_mp4=False)
