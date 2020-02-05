@@ -412,8 +412,8 @@ if __name__ == '__main__':
     Now, i need to get to some new stuff.
     Enjoy!!
     """
-    X, _ = make_blobs(n_samples=150, centers=5, n_features=2, cluster_std=1.)
+    X, _ = make_blobs(n_samples=150, centers=3, n_features=2, cluster_std=2.)
     colors = np.array([(31, 119, 180), (255, 127, 14), (44, 160, 44), (111, 12, 10), (10, 100, 255),
                        (200, 100, 100), (12, 0, 0), (255, 255, 200), (150, 150, 0), (0, 255, 255)]) / 255.
-    model = GaussianMM(n_clusters=5)
+    model = GaussianMM(n_clusters=3)
     model.fit_animate(X, colors, render_as_mp4=False)
