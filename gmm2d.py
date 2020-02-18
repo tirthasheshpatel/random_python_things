@@ -5,12 +5,15 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from scipy.stats import multivariate_normal as Normal
 from sklearn.datasets import make_blobs, make_spd_matrix
-np.random.seed(42)
+
+# np.random.seed(42)
+
 
 def make_simplex(n_clusters):
     """Generate a (n_clusters - 1)-D random simplex"""
     x = np.random.randn(n_clusters)
-    return np.exp(x)/np.sum(np.exp(x))
+    return np.exp(x) / np.sum(np.exp(x))
+
 
 class GaussianMM:
     """Gaussian Mixture Model. A soft clustering
@@ -27,6 +30,7 @@ class GaussianMM:
     >>> model = GaussianMM(n_clusters=2)
     >>> model.fit(X, epochs=100)
     """
+
     def __init__(self, n_clusters=3):
         self.n_clusters = n_clusters
         self.n_samples = None
@@ -39,7 +43,7 @@ class GaussianMM:
         self.mu = None
         self.sigma = None
         self.pi = None
-    
+
     def __init_params(self, n_samples, n_features):
         """Reinitialize the parameters.
 
@@ -73,9 +77,10 @@ class GaussianMM:
         # initialize the `theta` parameters
         self.pi = make_simplex(self.n_clusters).reshape(-1, 1)
         self.mu = np.random.randn(self.n_clusters, self.n_features)
-        self.sigma = np.asarray([make_spd_matrix(self.n_features) \
-                                 for _ in range(self.n_clusters)])
-        
+        self.sigma = np.asarray(
+            [make_spd_matrix(self.n_features) for _ in range(self.n_clusters)]
+        )
+
         # Initialize the posterior as zeros
         self.posterior = np.zeros((self.n_clusters, self.n_samples), dtype=np.float64)
 
@@ -102,17 +107,20 @@ class GaussianMM:
         # First, calculate the normalization constant of the posterior.
         # NOTE: It is tractable to calculate the porterior as the latent
         # variable is finitely discrete.
-        _normalization_constant = 0.
+        _normalization_constant = 0.0
         for cluster in range(self.n_clusters):
-            _normalization_constant += Normal(self.mu[cluster], self.sigma[cluster]).pdf(X) \
-                                      * self.pi[cluster]
-        
+            _normalization_constant += (
+                Normal(self.mu[cluster], self.sigma[cluster]).pdf(X) * self.pi[cluster]
+            )
+
         # Now, we calculate the posterior for each cluster.
         for cluster in range(self.n_clusters):
-            self.posterior[cluster] = Normal(self.mu[cluster], self.sigma[cluster]).pdf(X) \
-                                         * self.pi[cluster] \
-                                         / _normalization_constant
-        
+            self.posterior[cluster] = (
+                Normal(self.mu[cluster], self.sigma[cluster]).pdf(X)
+                * self.pi[cluster]
+                / _normalization_constant
+            )
+
         return None
 
     def _m_step(self, X):
@@ -134,18 +142,32 @@ class GaussianMM:
         """
         # First, update the centers of clusters
         for cluster in range(self.n_clusters):
-            self.mu[cluster] = np.sum(self.posterior[cluster] * X.T, axis=1) \
-                               / np.sum(self.posterior[cluster])
-        
+            self.mu[cluster] = np.nan_to_num(
+                np.sum(self.posterior[cluster] * X.T, axis=1)
+                / np.sum(self.posterior[cluster]),
+                nan=1.0,
+                posinf=1.0,
+                neginf=1.0,
+            )
+
         for cluster in range(self.n_clusters):
-            self.sigma[cluster] = np.sum([self.posterior[cluster, i] \
-                                          * np.outer( X[i] - self.mu[cluster], X[i] - self.mu[cluster] ) \
-                                          for i in range(self.n_samples)], axis=0) \
-                                  / np.sum(self.posterior[cluster])
-        
-        self.pi = np.sum(self.posterior, axis=1) \
-                           / self.n_samples
-        
+            self.sigma[cluster] = np.nan_to_num(
+                np.sum(
+                    [
+                        self.posterior[cluster, i]
+                        * np.outer(X[i] - self.mu[cluster], X[i] - self.mu[cluster])
+                        for i in range(self.n_samples)
+                    ],
+                    axis=0,
+                )
+                / np.sum(self.posterior[cluster]),
+                nan=1.0,
+                posinf=1.0,
+                neginf=1.0,
+            )
+
+        self.pi = np.sum(self.posterior, axis=1) / self.n_samples
+
         return None
 
     def _step(self, X):
@@ -163,12 +185,16 @@ class GaussianMM:
 
         labels = self.posterior.argmax(axis=0)
 
-        zm = self.pi[0]*Normal.pdf(self.grid, mean=self.mu[0], cov=self.sigma[0])
+        zm = self.pi[0] * Normal.pdf(self.grid, mean=self.mu[0], cov=self.sigma[0])
         for cluster in range(1, self.n_clusters):
-            zm += self.pi[cluster]*Normal.pdf(self.grid, mean=self.mu[cluster], cov=self.sigma[cluster])
+            zm += self.pi[cluster] * Normal.pdf(
+                self.grid, mean=self.mu[cluster], cov=self.sigma[cluster]
+            )
 
         self.cf = self.ax.contourf(self.xm, self.ym, zm, alpha=0.6)
-        self.sc = self.ax.scatter(self.X[:, 0], self.X[:, 1], c=self.colors[labels], s=30)
+        self.sc = self.ax.scatter(
+            self.X[:, 0], self.X[:, 1], c=self.colors[labels], s=30
+        )
         return self.cf, self.sc
 
     def _fit_animate(self, frame):
@@ -177,12 +203,12 @@ class GaussianMM:
         # so I can play animations. Not needed to be
         # tested! Enjoy!
         # Restart the animation every max_iter steps
-        if ((frame+1) % self.__max_iter) == 0:
+        if ((frame + 1) % self.__max_iter) == 0:
             self.__init_params(*self.X.shape)
 
         self.ax.clear()
         try:
-            if np.abs(1. - np.sum(self.pi)) > 1e-9:
+            if np.abs(1.0 - np.sum(self.pi)) > 1e-9:
                 plt.title("Model Collapsed!")
                 return self.cf, self.sc
             self._step(self.X)
@@ -196,12 +222,16 @@ class GaussianMM:
 
         labels = self.posterior.argmax(axis=0)
 
-        zm = self.pi[0]*Normal.pdf(self.grid, mean=self.mu[0], cov=self.sigma[0])
+        zm = self.pi[0] * Normal.pdf(self.grid, mean=self.mu[0], cov=self.sigma[0])
         for cluster in range(1, self.n_clusters):
-            zm += self.pi[cluster]*Normal.pdf(self.grid, mean=self.mu[cluster], cov=self.sigma[cluster])
+            zm += self.pi[cluster] * Normal.pdf(
+                self.grid, mean=self.mu[cluster], cov=self.sigma[cluster]
+            )
 
         self.cf = self.ax.contourf(self.xm, self.ym, zm, alpha=0.6)
-        self.sc = self.ax.scatter(self.X[:, 0], self.X[:, 1], c=self.colors[labels], s=30)
+        self.sc = self.ax.scatter(
+            self.X[:, 0], self.X[:, 1], c=self.colors[labels], s=30
+        )
         plt.title(f"loss : {vlb:.2f}, best_loss : {self.vlb:.2f}")
         return self.cf, self.sc
 
@@ -231,11 +261,11 @@ class GaussianMM:
         """
         vlb = np.sum(
             [
-                self.posterior[cluster] * np.log(self.pi[cluster]) \
-                + Normal(self.mu[cluster], self.sigma[cluster]).logpdf(X) \
+                self.posterior[cluster] * np.log(self.pi[cluster])
+                + Normal(self.mu[cluster], self.sigma[cluster]).logpdf(X)
                 for cluster in range(self.n_clusters)
             ]
-        ) - np.sum(self.posterior*np.log(self.posterior))
+        ) - np.sum(self.posterior * np.log(self.posterior))
 
         return vlb
 
@@ -288,7 +318,7 @@ class GaussianMM:
                 for __ in range(max_iter):
                     # If the constraint over weights diverge
                     # restart training.
-                    if np.abs(1. - np.sum(self.pi)) > rtol:
+                    if np.abs(1.0 - np.sum(self.pi)) > rtol:
                         warnings.warn("Weights Diverged!", RuntimeWarning)
                         break
                     self._step(X)
@@ -298,7 +328,7 @@ class GaussianMM:
                             f"\rTrial {_+1}/{n_repeats}, Epoch {__+1}/{max_iter} : "
                             f"loss : {vlb:.2f}, best_loss : {self.vlb:.2f}"
                         )
-                
+
                 # We chosse the best parameters
                 # that maximize our lower bound
                 if vlb > self.vlb:
@@ -307,9 +337,12 @@ class GaussianMM:
                     best_sigma = self.sigma
                     best_pi = self.pi
             except np.linalg.LinAlgError:
-                warnings.warn(f"Trial {_+1}: Singular Matrix: Components Collapsed", RuntimeWarning)
+                warnings.warn(
+                    f"Trial {_+1}: Singular Matrix: Components Collapsed",
+                    RuntimeWarning,
+                )
                 continue
-        
+
         # update the parameters according
         # to the best found so far.
         self.mu = best_mu
@@ -318,7 +351,9 @@ class GaussianMM:
 
         return self.vlb, self.mu, self.sigma, self.pi
 
-    def fit_animate(self, X, colors, frames=50, interval=100, max_iter=100, *, render_as_mp4=True):
+    def fit_animate(
+        self, X, colors, frames=50, interval=100, max_iter=100, *, render_as_mp4=True
+    ):
         """Visualize the training of GMMs by
         running an animation in real time!!!
 
@@ -355,23 +390,29 @@ class GaussianMM:
         self.__max_iter = max_iter
         self.set_data(X)
         self.fig, self.ax = plt.subplots()
-        xmin, ymin, xmax, ymax = (np.min(self.X[:, 0]),
-                                 np.min(self.X[:, 1]),
-                                 np.max(self.X[:, 0]),
-                                 np.max(self.X[:, 1]))
-        xs = np.linspace(xmin-1., xmax+1., num=500)
-        ys = np.linspace(ymin-1., ymax+1., num=500)
+        xmin, ymin, xmax, ymax = (
+            np.min(self.X[:, 0]),
+            np.min(self.X[:, 1]),
+            np.max(self.X[:, 0]),
+            np.max(self.X[:, 1]),
+        )
+        xs = np.linspace(xmin - 1.0, xmax + 1.0, num=500)
+        ys = np.linspace(ymin - 1.0, ymax + 1.0, num=500)
         self.xm, self.ym = np.meshgrid(xs, ys)
         self.grid = np.empty((500, 500, 2))
         self.grid[:, :, 0] = self.xm
         self.grid[:, :, 1] = self.ym
         self.colors = colors
-        anim = FuncAnimation(self.fig,
-                             self._fit_animate,
-                             init_func=self._init_animate,
-                             frames=frames, interval=interval, blit=False)
+        anim = FuncAnimation(
+            self.fig,
+            self._fit_animate,
+            init_func=self._init_animate,
+            frames=frames,
+            interval=interval,
+            blit=False,
+        )
         if render_as_mp4:
-            anim.save('gmm2d_animation.mp4')
+            anim.save("gmm2d_animation.mp4")
         else:
             plt.show()
 
@@ -405,15 +446,31 @@ class GaussianMM:
         which is a tuple (mu, sigma, pi)."""
         return self.mu.copy(), self.sigma.copy(), self.pi.copy()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     """Some cool stuff ahead!
     Wasted two days running this animation
     and still find it satisfying! Love it!!
     Now, i need to get to some new stuff.
     Enjoy!!
     """
-    X, _ = make_blobs(n_samples=150, centers=3, n_features=2, cluster_std=2.)
-    colors = np.array([(31, 119, 180), (255, 127, 14), (44, 160, 44), (111, 12, 10), (10, 100, 255),
-                       (200, 100, 100), (12, 0, 0), (255, 255, 200), (150, 150, 0), (0, 255, 255)]) / 255.
-    model = GaussianMM(n_clusters=3)
-    model.fit_animate(X, colors, render_as_mp4=False)
+    # X, _ = make_blobs(n_samples=150, centers=3, n_features=2, cluster_std=2.)
+    # colors = np.array([(31, 119, 180), (255, 127, 14), (44, 160, 44), (111, 12, 10), (10, 100, 255),
+    #                    (200, 100, 100), (12, 0, 0), (255, 255, 200), (150, 150, 0), (0, 255, 255)]) / 255.
+    # model = GaussianMM(n_clusters=3)
+    # model.fit_animate(X, colors, render_as_mp4=False)
+    import cv2
+
+    X = cv2.imread("tirth.jpeg")
+    X = cv2.resize(X, (360, 480))
+    cv2.imshow("GMM Clusters in the Image", X)
+    cv2.waitKey(0)
+    init_shape = X.shape
+    X = X.reshape(-1, 3)
+    model = GaussianMM(2)
+    model.fit(X, max_iter=100, n_repeats=10, verbose=True)
+    preds = model.predict(X) * X
+    preds = preds.reshape(*init_shape)
+    cv2.imshow("GMM Clusters in the Image", preds)
+
+    cv2.waitKey(0)

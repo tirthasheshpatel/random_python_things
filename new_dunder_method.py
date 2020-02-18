@@ -7,15 +7,18 @@ class EnforceMeta(type):
 
 
 class Root(metaclass=EnforceMeta):
-    pass 
+    pass
+
 
 class ChildA(Root):
     def method_name(self):
         pass
 
+
 class ChildB(Root):
     def methodName(self):
         pass
+
 
 a = ChildA()
 b = ChildB()
