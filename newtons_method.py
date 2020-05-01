@@ -58,5 +58,5 @@ class OverconstrainedSystem(object):
             raise ValueError("expected x of shape (q, ). got {}".format(x.shape))
 
 func = SquareSystem(1)
-anim = FuncAnimation(fig, functools.partial(func.optimize, None, 50), frames=100, interval=500)
+anim = FuncAnimation(fig, functools.partial(func.optimize, None, 50), frames=100, interval=10)
 plt.show()
