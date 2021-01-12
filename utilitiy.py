@@ -1,4 +1,5 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python
+
 import os
 import sys
 import time
@@ -28,6 +29,22 @@ if __name__ == "__main__":
   while i<100:
     sys.stderr.write("\r%sLoading: %s%s" % (c[i%6], l[i%4], colors.NOCOLOR))
     i+=1
-    time.sleep(0.2)
+    time.sleep(0.1)
   sys.stderr.flush()
+  sys.stderr.write("\r%sHey human.%s" % (colors.GREEN, colors.NOCOLOR))
+  time.sleep(2)
+  sys.stdout.flush()
+  sys.stderr.write("\r" + " "*50)
+  sys.stderr.write("\r%sIt's getting late!%s" % (colors.CYAN, colors.NOCOLOR))
+  time.sleep(2)
+  sys.stderr.flush()
+  sys.stderr.write("\r" + " "*50)
+  sys.stderr.write("\r%sGood night human!%s" % (colors.YELLOW, colors.NOCOLOR))
+  time.sleep(2)
+  sys.stderr.flush()
+  sys.stderr.write("\r" + " "*50)
+  sys.stderr.write("\r%sbye bye...%s" % (colors.ORANGE, colors.NOCOLOR))
+  time.sleep(2)
+  sys.stderr.flush()
+  sys.stderr.write("\r" + " "*50)
   sys.stderr.write("\r%sError loading!%s\n" % (colors.RED, colors.NOCOLOR))
