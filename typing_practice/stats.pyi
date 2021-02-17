@@ -2,7 +2,6 @@ import numpy as np
 from typing import (
     TYPE_CHECKING,
     SupportsFloat,
-    SupportsInt,
     Union, Optional
 )
 
@@ -11,7 +10,7 @@ if TYPE_CHECKING:
 
 def mean(x: npt.ArrayLike,
          weights: Optional[Union[None, npt.ArrayLike]] = ...,
-         axis: Optional[SupportsInt] = ...,
-         ddof: Optional[SupportsInt] = ...,
-         tol: Optional[Union[None, SupportsFloat]] = ...) -> npt.ArrayLike:
+         axis: Optional[int] = ...,
+         ddof: Optional[Union[int]] = ...,
+         tol: Optional[Union[None, np.floating, SupportsFloat]] = ...) -> npt.ArrayLike:
     ...
