@@ -1,5 +1,34 @@
+__all__ : list = [
+    'HahaLolError',
+    'function',
+    'hahalol',
+    'take_a_tuple',
+    'square',
+    'foo',
+    'bar',
+    'C', 'CC', 'CCC', 'CCCC',
+    'accept_c',
+    'accept_a_and_return_b',
+    'StarShip',
+    'Connection',
+    'MyGenericClass',
+    'concat',
+    'Proto',
+    'B',
+    'proto_func',
+    'Employee',
+    'UserID',
+    'Point2D',
+    'cdevide',
+    'Base',
+    'Sub'
+]
+
+from sys import version_info
+
 from typing import *
-from typing_extensions import *
+if version_info <= (3, 8):
+    from typing_extensions import * # type: ignore
 
 # Setup Code
 class HahaLolError(Exception):
@@ -24,7 +53,7 @@ def take_a_tuple(a : Tuple) -> Tuple:
 # Union : A union of two python constructs
 def square(var : Union[int, float]) -> Union[int, float]:
     from math import pow
-    return pow(var)
+    return pow(var, 2)
 
 # Optional : ``Optional[X]`` is equivalent to ``Union[X, None]``.
 def foo(a : Optional[int] = None) -> int:
@@ -34,14 +63,20 @@ def foo(a : Optional[int] = None) -> int:
 def bar(bar_fn : Callable[[int, int], float]):
     return bar_fn(1, 2)
 
-# Type[C] : Accept any object of class C or a subclass of C.
+# Type[C] : A variable annotated with C may accept a value
+# of type C. In contrast, a variable annotated with Type[C]
+# may accept values that are **classes themselves**.
 # all subclasses of C should implement the same constructor
 # signature and class method signatures as C. The type checker
 # should flag violations of this, but should also allow
 # constructor calls in subclasses that match the constructor
 # calls in the indicated base class.
 class C : ...
+class CC(C): ...
+class CCC(CC): ...
+class CCCC(CCC): ...
 
+# accepts all C, CC, CCC, CCCC
 def accept_c(cls : Type[C]) -> str:
     return "accepted"
 
@@ -79,7 +114,7 @@ V = TypeVar("V", str, bytes)
 
 class MyGenericClass(Generic[U, V]):
     def __init__(self, dictionary : Mapping[U, V]) -> None:
-        self.dictionary = dictionary
+        self.dictionary : Mapping[U, V] = dictionary
 
     def get(self, key : U) -> V:
         return self.dictionary[key]
@@ -119,9 +154,9 @@ UserID = NewType("UserID", int)
 
 # TypedDict : Add type hints to a dictionary
 class Point2D(TypedDict):
-    x : float = 0
-    y : float = 0
-    label : str = "origin"
+    x : float
+    y : float
+    label : str
 
 # Generic Concrete Collections
 # ============================
@@ -168,21 +203,85 @@ class Point2D(TypedDict):
 
 # overload : If some funtion takes a specific combination
 # of parameters then we can use `overload` (rather than `Union`)
-# for more constrained type checking.
+# for more constrained type checking. See the example below.
 
-def cdevide(a: int, b: int) -> int:
-    return a // b
+# Note : Documentation page isn't very helpful for understading the overload
+# decorator. See PEP-484 instead:
+# https://www.python.org/dev/peps/pep-0484/#function-method-overloading
 
-def cdevide(a: float, b: float) -> float:
-    return a / b
 
-# Notice that in the above example if we used `Union`, that is:
-# ``cdevide(a: Union[int, float], b: Union[int, float])``
-# it would accepts the combinations: (int, int), (int, float),
-# (float, int), and (float, float). But when we use overload,
-# we only accept two of the combinations: (int, int), (float, float).
-# This distinction is subtle but most important for the existance of
-# overload
+# Some Notes on the `overload` decorator from PEP-484
+# ===================================================
+# FIRST POINT TO NOTE: Union cannot express the relationship between
+#                      the argument and the return type, ``overload``
+#                      can!
+# 
+# MORE DESCRIPTION OF THE FIRST POINT.
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# The @overload decorator allows describing functions and methods that
+# support multiple different combinations of argument types. This pattern
+# is used frequently in builtin modules and types. For example, the
+# ``__getitem__()`` method of the bytes type can be described as follows:
+# -------------------------------------------------------
+# from typing import overload
+# 
+# class bytes:
+#     ...
+#     @overload
+#     def __getitem__(self, i: int) -> int: ...
+#     @overload
+#     def __getitem__(self, s: slice) -> bytes: ...
+# ------------------------------------------------------
+# This description is more precise than would be possible using unions
+# which cannot express the relationship between the argument and return
+# types.
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 
+# POINT TWO TO NOTE: ``overload`` doesn't provide a multiple dispatch
+#                    implementation. So, overloading a function with
+#                    (int, int) -> int and (float, float) -> float
+#                    would still accept (int, float) and (float, int)
+#                    combinations of arguments. An example is given in
+#                    the description.
+# 
+# # MORE DESCRIPTION OF THE SECOND POINT.
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# While it would be possible to provide a multiple dispatch implementation
+# using this syntax, its implementation would require using sys._getframe(),
+# which is frowned upon. Also, designing and implementing an efficient
+# multiple dispatch mechanism is hard, which is why previous attempts were
+# abandoned in favor of functools.singledispatch(). (See PEP 443, especially
+# its section "Alternative approaches".) In the future we may come up with a
+# satisfactory multiple dispatch design, but we don't want such a design to
+# be constrained by the overloading syntax defined for type hints in stub
+# files. It is also possible that both features will develop independent
+# from each other (since overloading in the type checker has different use
+# cases and requirements than multiple dispatch at runtime -- e.g. the
+# latter is unlikely to support generic types).
+# 
+# A constrained ``TypeVar`` type can often be used instead of using the
+# @overload decorator. For example, the definitions of `concat1` and
+# `concat2` in this stub file are equivalent:
+# ------------------------------------------------------
+# from typing import TypeVar
+# 
+# Number = TypeVar('Number', int, float)
+# 
+# def concat1(x: Number, y: Number) -> Number: ...
+# 
+# @overload
+# def concat2(x: int, y: int) -> int: ...
+# @overload
+# def concat2(x: float, y: float) -> float: ...
+# ------------------------------------------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+@overload
+def cdevide(a: int, b: int) -> int: ...
+@overload
+def cdevide(a: complex, b: complex) -> complex: ...
+def cdevide(a, b):
+    return a // b if isinstance(a, int) else a/b
 
 # final : indicates the type checker that the method/function can't be
 # overridden and, if used with class, the class cannot be subclassed.
