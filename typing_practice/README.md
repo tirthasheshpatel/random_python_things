@@ -16,4 +16,8 @@ existing typing module in python. Some of them are listed below:
             annotations from being evaluated during runtime, thus storing
             them as plain strings
 - PEP 593 : Introduces `Annotated` to provide metadata in Typing.
-- PEP
+- PEP 526 : `TODO`
+- PEP 544 : `TODO`
+- PEP 586 : `TODO`
+- PEP 589 : `TODO`
+- PEP 591 : `TODO`
